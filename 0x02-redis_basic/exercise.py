@@ -4,7 +4,18 @@
 
 import redis
 import uuid
+import functools
 from typing import Union, Callable
+
+
+def count_calls(fn: Callable) -> Callable:
+    """Add count calls functionality to a method."""
+    method = fn.__qualname__
+    @functools.wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        self._redis.incr(method)
+        return fn(self, *args, **kwargs)
+    return wrapper
 
 
 class Cache:
@@ -15,6 +26,7 @@ class Cache:
         self._redis = redis.Redis(host=host, port=port, db=db)
         self._redis.flushdb()
 
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Set a key to a value.
